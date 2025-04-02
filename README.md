@@ -1,11 +1,8 @@
-# Windows Forensic Analyzer
-
-```markdown
-# Windows Forensic Analyzer
+# Windows Forensic Analyser
 
 A comprehensive PowerShell toolkit for system forensic analysis, threat hunting, and security incident response on Windows systems. Automates the collection and analysis of forensic artifacts to identify potential security compromises.
 
-![Forensic Analyzer Banner](https://example.com/path/to/banner.png)
+![Forensic Analyser Banner](https://example.com/path/to/banner.png)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PowerShell Gallery](https://img.shields.io/powershellgallery/v/ForensicAnalyzer.svg)](https://www.powershellgallery.com/packages/ForensicAnalyzer)
@@ -29,11 +26,10 @@ A comprehensive PowerShell toolkit for system forensic analysis, threat hunting,
             - [Customization](#customization)
             - [Contributing](#contributing)
             - [Security Considerations](#security-considerations)
-            - [License](#license)
 
             ## Overview
 
-            Windows Forensic Analyzer is a powerful toolkit designed for security professionals, system administrators, and incident responders who need to quickly assess Windows systems for signs of compromise. The toolkit automates the collection and analysis of forensic artifacts, helping to identify suspicious activity and potential security incidents.
+            Windows Forensic Analyser is a powerful toolkit designed for security professionals, system administrators, and incident responders who need to quickly assess Windows systems for signs of compromise. The toolkit automates the collection and analysis of forensic artifacts, helping to identify suspicious activity and potential security incidents.
 
             The framework follows a modular approach, with separate functions for different analysis areas, allowing for flexibility in deployment and execution. Results are presented in interactive HTML reports that highlight critical findings and provide detailed information for further investigation.
 
