@@ -83,25 +83,39 @@ cd C:\Path\To\ForensicAnalyzer
 
  * Run the installer:
 .\Install-ForensicAnalyzer.ps1
+```
 
-Usage
-Basic Usage
+## Usage
+### Basic Usage
 Run a basic analysis of the local system:
+
+```powershell
 Import-Module ForensicAnalyzer
 Start-ForensicAnalysis
+```
 
-Run a quick scan:
+### Run a quick scan
+```powershell
+Import-Module ForensicAnalyzer
 Start-ForensicAnalysis -QuickScan
+```
 
-Advanced Usage
+### Advanced Usage
 Customize the analysis with additional parameters:
+
+```powershell
+Import-Module ForensicAnalyzer
 Start-ForensicAnalysis -OutputDirectory "D:\ForensicData" -IncludeMemoryDump
 Start-ForensicAnalysis -EventHours 72 -RecentExeDays 14
 Start-ForensicAnalysis -GenerateHtmlReport
 Start-ForensicAnalysis -SecureResults -CertificateThumbprint "1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t"
+```
 
-Scheduled Analysis
+### Scheduled Analysis
 Schedule regular forensic scans:
+
+```powershell
+Import-Module ForensicAnalyzer
 Register-ForensicAnalysisSchedule -ScheduleType Daily -Time "23:00" -QuickScan
 Register-ForensicAnalysisSchedule -ScheduleType Weekly -DayOfWeek Saturday -Time "22:00" `
                                 -CentralRepository "\\Server\Share\ForensicResults" `
@@ -109,9 +123,13 @@ Register-ForensicAnalysisSchedule -ScheduleType Weekly -DayOfWeek Saturday -Time
                                 -ReportRecipients "security@company.com" `
                                 -SMTPServer "smtp.company.com" `
                                 -SMTPCredential (Get-Credential)
+```
 
-Multi-System Analysis
+### Multi-System Analysis
 Analyze multiple systems on your network:
+
+```powershell
+Import-Module ForensicAnalyzer
 $computers = @("Workstation01", "Server01", "LaptopXYZ")
 $computerData = @{}
 foreach ($computer in $computers) {
@@ -123,9 +141,14 @@ foreach ($computer in $computers) {
     $computerData[$computer] = "\\$computer\C$\ForensicData"
 }
 New-MultiComputerForensicReport -ComputerData $computerData -OutputPath "D:\Reports\MultiSystemReport.html"
+```
 
-Report Generation
+## Report Generation
 Generate rich HTML reports:
+
+```powershell
+Import-Module ForensicAnalyzer
+
 $results = Start-ForensicAnalysis
 New-ForensicHtmlReport -Results $results -OutputPath "C:\Reports\Forensic_Report.html"
 Send-SecureForensicReport -ReportPath "C:\Reports\Forensic_Report.html" `
@@ -133,9 +156,15 @@ Send-SecureForensicReport -ReportPath "C:\Reports\Forensic_Report.html" `
                         -SMTPServer "smtp.company.com" `
                         -Credential (Get-Credential) `
                         -UseTLS
+```
 
-Secure Distribution
+## Secure Report Distribution
 Encrypt and distribute reports securely:
+
+
+```powershell
+Import-Module ForensicAnalyzer
+
 Protect-ForensicReport -ReportPath "C:\Reports\Forensic_Report.html" `
                      -OutputPath "C:\Secure\Encrypted_Report.zip" `
                      -CertificateThumbprint "1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t"
@@ -143,10 +172,12 @@ $securePassword = Read-Host -AsSecureString -Prompt "Enter encryption password"
 Protect-ForensicReport -ReportPath "C:\Reports\Forensic_Report.html" `
                      -OutputPath "C:\Secure\Encrypted_Report.zip" `
                      -Password $securePassword
+```
 
-Modules
+## Modules
 Windows Forensic Analyzer is organized into functional modules:
-Core Module
+
+### Core Modules
  * Start-ForensicAnalysis: Main function to initiate the analysis.
  * Initialize-Environment: Sets up the environment for analysis.
  * Write-ForensicLog: Logging function.
@@ -155,7 +186,8 @@ System Information Modules
  * Get-DriveInfo: Gathers drive health and space usage.
  * Get-UserInfo: Collects user account and permission details.
  * Get-HardwareInfo: Lists connected devices and hardware inventory.
-Security Analysis Modules
+
+### Security Analysis Modules
  * Get-FirewallRules: Analyzes Windows Firewall rules.
  * Get-DefenderStatus: Assesses Windows Defender configuration.
  * Get-InstalledPatches: Lists installed security updates.
@@ -168,25 +200,29 @@ Persistence Mechanisms Modules
  * Get-WMIPersistence: Analyzes WMI event subscriptions.
  * Get-EnvironmentVariables: Checks environment variable manipulations.
  * Get-DllHijacking: Identifies DLL hijacking opportunities.
-Network Analysis Modules
+
+### Network Analysis Modules
  * Get-NetworkConnections: Lists active network connections.
  * Get-UnusualPorts: Detects unusual network ports.
  * Get-DnsSettings: Analyzes DNS settings.
  * Get-SmbShares: Lists SMB shares.
  * Get-RemoteAccessServices: Detects remote access services.
-Process Analysis Modules
+
+### Process Analysis Modules
  * Get-Processes: Lists running processes and loaded modules.
  * Get-RecentlyModifiedExecutables: Finds recently modified executables.
  * Get-ProcessNetworkMappings: Maps processes to network connections.
  * Get-DriverVerification: Verifies drivers and kernel modules.
  * Get-RootkitIndicators: Detects potential rootkit indicators.
-Activity Analysis Modules
+
+### Activity Analysis Modules
  * Get-PowerShellHistory: Analyzes PowerShell command history.
  * Get-BrowserExtensions: Lists browser extensions.
  * Get-RecentlyDeletedFiles: Finds recently deleted files.
  * Get-UsbHistory: Lists USB device history.
  * Get-ShadowCopies: Analyzes shadow copies.
-Web Server Analysis Modules
+
+### Web Server Analysis Modules
  * Get-Webshells: Detects potential web shells.
  * Get-WebServerConfig: Analyzes web server configurations.
  * Get-WebAccessPoints: Lists web access points.
@@ -194,17 +230,22 @@ Reporting Modules
  * New-ForensicHtmlReport: Generates HTML reports.
  * New-MultiComputerForensicReport: Generates multi-system reports.
  * Send-SecureForensicReport: Sends reports securely via email.
-Utility Modules
+
+### Utility Modules
  * Protect-ForensicReport: Encrypts reports.
  * Unprotect-ForensicReport: Decrypts reports.
  * Register-ForensicAnalysisSchedule: Schedules forensic scans.
-Output
+
+## Output
 The toolkit generates CSV files for each analysis module and consolidates the results into interactive HTML reports. The reports highlight critical findings and provide detailed information for further investigation.
-Customization
+
+## Customization
 The modular design allows for easy customization. You can modify existing modules or create new ones to suit your specific needs.
-Contributing
+
+## Contributing
 Contributions are welcome! Please submit pull requests or open issues for bug reports and feature requests.
-Security Considerations
+
+## Security Considerations
  * Run the toolkit with administrator privileges.
  * Securely store and distribute forensic data.
  * Regularly review audit logs and reports.
