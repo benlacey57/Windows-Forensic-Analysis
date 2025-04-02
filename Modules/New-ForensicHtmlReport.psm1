@@ -244,67 +244,345 @@ function GenerateSystemInfoContent {
 "@
     }
     
-    # Add more system information sections here...
-    
-    $content += "</div>"
-    return $content
-}
+    # Drive Health
+    if ($Results.ContainsKey("DriveHealth")) {
+        $driveHealth = Get-Content -Path $Results["DriveHealth"] -Raw | ConvertFrom-Json
+        
+        $content += @"
+<div class="card mb-4">
+    <div class="card-header">
+        <h4 class="mb-0">Storage Information</h4>
+    </div>
+    <div class="card-body">
+        <ul class="nav nav-tabs" id="storageTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="logical-tab" data-bs-toggle="tab" data-bs-target="#logical" type="button" role="tab">Logical Drives</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="physical-tab" data-bs-toggle="tab" data-bs-target="#physical" type="button" role="tab">Physical Drives</button>
+            </li>
+        </ul>
+        <div class="tab-content pt-3" id="storageTabContent">
+            <div class="tab-pane fade show active" id="logical" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover sortable" id="logicalDrivesTable">
+                        <thead>
+                            <tr>
+                                <th>Drive</th>
+                                <th>Label</th>
+                                <th>File System</th>
+                                <th>Health</th>
+                                <th>Size (GB)</th>
+                                <th>Free Space (GB)</th>
+                                <th>BitLocker</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+"@
 
-# Helper function to generate Security Configuration section
-function GenerateSecurityContent {
-    param([hashtable]$Results)
-    
-    $content = "<div class='mt-4'>"
-    
-    # Add security configuration sections here...
-    
-    $content += "</div>"
-    return $content
-}
+        foreach ($drive in $driveHealth.LogicalDrives) {
+            $rowClass = ""
+            if ($drive.HealthStatus -ne "Healthy") {
+                $rowClass = "row-critical"
+            }
+            
+            $content += @"
+                            <tr class="$rowClass">
+                                <td>$($drive.DriveLetter):</td>
+                                <td>$($drive.Label)</td>
+                                <td>$($drive.FileSystem)</td>
+                                <td>
+                                    $(if ($drive.HealthStatus -eq "Healthy") {
+                                        "<span class='badge bg-success'>Healthy</span>"
+                                    } else {
+                                        "<span class='badge bg-danger'>$($drive.HealthStatus)</span>"
+                                    })
+                                </td>
+                                <td>$($drive.SizeTotalGB)</td>
+                                <td>$($drive.SizeFreeGB)</td>
+                                <td>
+                                    $(if ($drive.BitLockerEnabled -eq "True") {
+                                        "<span class='badge bg-success'>Enabled</span>"
+                                    } else {
+                                        "<span class='badge bg-secondary'>Disabled</span>"
+                                    })
+                                </td>
+                            </tr>
+"@
+        }
 
-# Helper function to generate Network Analysis section
-function GenerateNetworkContent {
-    param([hashtable]$Results)
-    
-    $content = "<div class='mt-4'>"
-    
-    # Add network analysis sections here...
-    
-    $content += "</div>"
-    return $content
-}
+        $content += @"
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="physical" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover sortable" id="physicalDrivesTable">
+                        <thead>
+                            <tr>
+                                <th>Device ID</th>
+                                <th>Model</th>
+                                <th>Media Type</th>
+                                <th>Health Status</th>
+                                <th>Size (GB)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+"@
 
-# Helper function to generate Process Analysis section
-function GenerateProcessContent {
-    param([hashtable]$Results)
-    
-    $content = "<div class='mt-4'>"
-    
-    # Add process analysis sections here...
-    
-    $content += "</div>"
-    return $content
-}
+        foreach ($disk in $driveHealth.PhysicalDrives) {
+            $rowClass = ""
+            if ($disk.HealthStatus -ne "Healthy") {
+                $rowClass = "row-critical"
+            }
+            
+            $content += @"
+                            <tr class="$rowClass">
+                                <td>$($disk.DeviceId)</td>
+                                <td>$($disk.FriendlyName)</td>
+                                <td>$($disk.MediaType)</td>
+                                <td>
+                                    $(if ($disk.HealthStatus -eq "Healthy") {
+                                        "<span class='badge bg-success'>Healthy</span>"
+                                    } else {
+                                        "<span class='badge bg-danger'>$($disk.HealthStatus)</span>"
+                                    })
+                                </td>
+                                <td>$($disk.SizeGB)</td>
+                            </tr>
+"@
+        }
 
-# Helper function to generate Persistence Mechanisms section
-function GeneratePersistenceContent {
-    param([hashtable]$Results)
+        $content += @"
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+"@
+    }
     
-    $content = "<div class='mt-4'>"
-    
-    # Add persistence mechanisms sections here...
-    
-    $content += "</div>"
-    return $content
-}
+    # User Accounts
+    if ($Results.ContainsKey("UserPermissions")) {
+        $userPermissions = Import-Csv -Path $Results["UserPermissions"]
+        
+        $content += @"
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">User Accounts</h4>
+        <div>
+            <input type="text" class="form-control form-control-sm table-filter-input" placeholder="Filter users..." data-target="userAccountsTable">
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover sortable" id="userAccountsTable">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Enabled</th>
+                        <th>Admin Rights</th>
+                        <th>Last Logon</th>
+                        <th>Password Last Set</th>
+                        <th>Groups</th>
+                    </tr>
+                </thead>
+                <tbody>
+"@
 
-# Helper function to generate Evidence of Compromise section
-function GenerateCompromiseContent {
-    param([hashtable]$Results)
+        foreach ($user in $userPermissions) {
+            $userClass = ""
+            if ($user.IsAdmin -eq "True") {
+                $userClass = "row-warning"
+            }
+            if ($user.IsAdmin -eq "True" -and $user.Enabled -eq "True" -and $user.SuspiciousScore -gt 0) {
+                $userClass = "row-critical"
+            }
+            
+            $content += @"
+                    <tr class="$userClass">
+                        <td>$($user.UserName)</td>
+                        <td>
+                            $(if ($user.Enabled -eq "True") {
+                                "<span class='badge bg-success'>Enabled</span>"
+                            } else {
+                                "<span class='badge bg-secondary'>Disabled</span>"
+                            })
+                        </td>
+                        <td>
+                            $(if ($user.IsAdmin -eq "True") {
+                                "<span class='badge bg-warning text-dark'>Admin</span>"
+                            } else {
+                                "<span class='badge bg-secondary'>Standard</span>"
+                            })
+                        </td>
+                        <td>$($user.LastLogon)</td>
+                        <td>$($user.PasswordLastSet)</td>
+                        <td>$($user.Groups)</td>
+                    </tr>
+"@
+        }
+        
+        $content += @"
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+"@
+    }
     
-    $content = "<div class='mt-4'>"
+    # Connected Devices
+    if ($Results.ContainsKey("ConnectedDevices")) {
+        $devices = Import-Csv -Path $Results["ConnectedDevices"]
+        
+        $content += @"
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">Connected Devices</h4>
+        <div>
+            <input type="text" class="form-control form-control-sm table-filter-input" placeholder="Filter devices..." data-target="connectedDevicesTable">
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover sortable" id="connectedDevicesTable">
+                <thead>
+                    <tr>
+                        <th>Device Name</th>
+                        <th>Class</th>
+                        <th>Status</th>
+                        <th>Manufacturer</th>
+                    </tr>
+                </thead>
+                <tbody>
+"@
+
+        foreach ($device in $devices) {
+            $deviceClass = ""
+            if ($device.Status -ne "OK") {
+                $deviceClass = "row-warning"
+            }
+            
+            $content += @"
+                    <tr class="$deviceClass">
+                        <td>$($device.FriendlyName)</td>
+                        <td>$($device.Class)</td>
+                        <td>$($device.Status)</td>
+                        <td>$($device.Manufacturer)</td>
+                    </tr>
+"@
+        }
+        
+        $content += @"
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+"@
+    }
     
-    # Add evidence of compromise sections here...
+    # Hosts File Entries
+    if ($Results.ContainsKey("HostsFile")) {
+        $hostsEntries = Import-Csv -Path $Results["HostsFile"]
+        
+        $content += @"
+<div class="card mb-4">
+    <div class="card-header">
+        <h4 class="mb-0">Hosts File Entries</h4>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover sortable">
+                <thead>
+                    <tr>
+                        <th>IP Address</th>
+                        <th>Hostname</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+"@
+
+        foreach ($entry in $hostsEntries) {
+            $entryClass = ""
+            if ($entry.IsDefaultEntry -eq "False") {
+                $entryClass = "row-warning"
+            }
+            
+            $content += @"
+                    <tr class="$entryClass">
+                        <td>$($entry.IPAddress)</td>
+                        <td>$($entry.Hostname)</td>
+                        <td>
+                            $(if ($entry.IsDefaultEntry -eq "True") {
+                                "<span class='badge bg-secondary'>Default</span>"
+                            } else {
+                                "<span class='badge bg-warning text-dark'>Custom</span>"
+                            })
+                        </td>
+                    </tr>
+"@
+        }
+        
+        $content += @"
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+"@
+    }
+    
+    # Installed Patches
+    if ($Results.ContainsKey("InstalledPatches")) {
+        $patches = Import-Csv -Path $Results["InstalledPatches"]
+        
+        $content += @"
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">Installed Windows Updates</h4>
+        <div>
+            <input type="text" class="form-control form-control-sm table-filter-input" placeholder="Filter updates..." data-target="patchesTable">
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover sortable" id="patchesTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Description</th>
+                        <th>Installed By</th>
+                        <th>Installed On</th>
+                    </tr>
+                </thead>
+                <tbody>
+"@
+
+        foreach ($patch in $patches) {
+            $content += @"
+                    <tr>
+                        <td>$($patch.HotFixID)</td>
+                        <td>$($patch.Description)</td>
+                        <td>$($patch.InstalledBy)</td>
+                        <td>$($patch.InstalledOn)</td>
+                    </tr>
+"@
+        }
+        
+        $content += @"
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+"@
+    }
     
     $content += "</div>"
     return $content
