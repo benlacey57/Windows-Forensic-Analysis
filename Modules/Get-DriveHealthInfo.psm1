@@ -702,3 +702,85 @@ function Get-SmartAttributeName {
     }
 }
 
+function Format-DriveHealthResults {
+    param (
+        [Parameter(Mandatory = $true)]
+        [array]$GroupedData
+    )
+    
+    $formattedResults = @()
+    
+    foreach ($diskGroup in $GroupedData) {
+        $diskNumber = $diskGroup.Name
+        $diskData = $diskGroup.Group
+        
+        # Get the base disk information from one of the entries
+        $baseInfo = $diskData | Where-Object { $_.DataType -eq "PhysicalDisk" } | Select-Object -First 1
+        if (-not $baseInfo) {
+            $baseInfo = $diskData | Select-Object -First 1
+        }
+        
+        # Calculate overall health status
+        $healthStatus = "Healthy"
+        $healthDetails = @()
+        
+        # Check for critical issues
+        $criticalIssues = $diskData | Where-Object { 
+            $_.HealthStatus -eq "Unhealthy" -or 
+            $_.MetricStatus -eq "Critical" -or 
+            $_.OperationalStatus -eq "Critical" 
+        }
+        
+        if ($criticalIssues.Count -gt 0) {
+            $healthStatus = "Unhealthy"
+            foreach ($issue in $criticalIssues) {
+                $healthDetails += "$($issue.DiskMetric): $($issue.MetricValue)"
+            }
+        } else {
+            # Check for warnings
+            $warningIssues = $diskData | Where-Object { 
+                $_.HealthStatus -eq "Warning" -or 
+                $_.MetricStatus -eq "Warning" -or 
+                $_.OperationalStatus -eq "Warning" 
+            }
+            
+            if ($warningIssues.Count -gt 0) {
+                $healthStatus = "Warning"
+                foreach ($issue in $warningIssues) {
+                    $healthDetails += "$($issue.DiskMetric): $($issue.MetricValue)"
+                }
+            }
+        }
+        
+        # Calculate combined metrics
+        $temperature = ($diskData | Where-Object { $_.Temperature -ne $null } | Select-Object -First 1).Temperature
+        $readErrors = ($diskData | Where-Object { $_.ReadErrors -ne $null } | Select-Object -First 1).ReadErrors
+        $writeErrors = ($diskData | Where-Object { $_.WriteErrors -ne $null } | Select-Object -First 1).WriteErrors
+        $powerOnHours = ($diskData | Where-Object { $_.PowerOnHours -ne $null } | Select-Object -First 1).PowerOnHours
+        
+        # Create summary entry for this disk
+        $formattedResults += [PSCustomObject]@{
+            DiskNumber = $diskNumber
+            Model = $baseInfo.Model
+            SerialNumber = $baseInfo.SerialNumber
+            MediaType = $baseInfo.MediaType
+            BusType = $baseInfo.BusType
+            Size = $baseInfo.Size
+            HealthStatus = $healthStatus
+            Temperature = $temperature
+            ReadErrors = $readErrors
+            WriteErrors = $writeErrors
+            PowerOnHours = $powerOnHours
+            HealthDetails = ($healthDetails | Select-Object -Unique) -join "; "
+            SmartAttributes = ($diskData | Where-Object { $_.DataType -eq "SMART" -and $_.DiskMetric -ne "SMART Status" } | ForEach-Object { "$($_.DiskMetric): $($_.MetricValue)" }) -join "; "
+            StorageEvents = ($diskData | Where-Object { $_.DataType -eq "Event" } | Measure-Object).Count
+            LastError = ($diskData | Where-Object { $_.DataType -eq "Event" } | Sort-Object -Property MetricValue -Descending | Select-Object -First 1).Details
+        }
+    }
+    
+    return $formattedResults
+}
+
+# Export function
+Export-ModuleMember -Function Get-DriveHealthInfo
+
