@@ -44,9 +44,31 @@ function Get-WindowsLogParser {
         $applicationEvents = Get-ApplicationLogEvents -Config $config
         $eventFindings += $applicationEvents
         
-        # PowerShell logs - script execution
-        $powershellEvents = Get-PowerShellLogEvents -Config $config
-        $eventFindings += $powershellEvents
+        # PowerShell logs - script execution (using imported module)
+        if (Get-Command -Name Get-PowerShellLogEvents -ErrorAction SilentlyContinue) {
+            Write-ForensicLog "Collecting PowerShell log events using specialized module..."
+            $powershellConfig = @{
+                EventIDs = $config.PowerShellEvents
+                SuspiciousPatterns = @{
+                    Suspicious = $config.SuspiciousPatterns.CommandLines
+                    Critical = @(
+                        "mimikatz", "Invoke-Mimikatz", "Invoke-DLLInjection", 
+                        "Invoke-ReflectivePEInjection", "System.Management.Automation.AmsiUtils"
+                    )
+                    Obfuscation = @(
+                        "\$\{.*?\}", "\[[cChHaArR\]]()+\]", "JoIN\s*\(.*?-f"
+                    )
+                }
+            }
+            
+            $powershellEvents = Get-PowerShellLogEvents -Config $powershellConfig -LookbackDays $config.LookbackDays -MaxEvents $config.MaxEvents
+            $eventFindings += $powershellEvents
+        } else {
+            Write-ForensicLog "PowerShell log module not available, using basic PowerShell log collection" -Severity "Warning"
+            # Fallback to built-in basic PowerShell log collection if module not available
+            $basicPowershellEvents = Get-BasicPowerShellEvents -Config $config
+            $eventFindings += $basicPowershellEvents
+        }
         
         # Additional security logs - AppLocker, Defender, etc.
         $additionalEvents = Get-AdditionalSecurityEvents -Config $config
@@ -89,6 +111,76 @@ function Get-WindowsLogParser {
         Write-ForensicLog "Error analyzing Windows logs: $_" -Severity "Error"
         return $null
     }
+}
+
+# Basic PowerShell log collection function to use as fallback if module not available
+function Get-BasicPowerShellEvents {
+    param (
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Config
+    )
+    
+    $events = @()
+    $psEventMap = $Config.PowerShellEvents
+    $lookbackTime = (Get-Date).AddDays(-$Config.LookbackDays)
+    
+    try {
+        # PowerShell script block logging events
+        $psEvents = @()
+        
+        # Try to access PowerShell operational log
+        $psEvents += Get-WinEvent -FilterHashtable @{
+            LogName = 'Microsoft-Windows-PowerShell/Operational'
+            ID = $psEventMap.ScriptBlockLogging
+            StartTime = $lookbackTime
+        } -MaxEvents $Config.MaxEvents -ErrorAction SilentlyContinue
+        
+        foreach ($event in $psEvents) {
+            try {
+                $eventXML = [xml]$event.ToXml()
+                $scriptBlock = $eventXML.Event.EventData.Data.'#text'
+                
+                # Determine severity based on script content
+                $severity = "Information"
+                $patternMatched = ""
+                
+                # Check for suspicious script patterns
+                foreach ($pattern in $Config.SuspiciousPatterns.CommandLines) {
+                    if ($scriptBlock -match $pattern) {
+                        $severity = "Warning"
+                        $patternMatched = "Suspicious PowerShell command: $pattern"
+                        break
+                    }
+                }
+                
+                # Get a summary of the script (first few characters)
+                $scriptSummary = $scriptBlock.Substring(0, [Math]::Min(100, $scriptBlock.Length))
+                
+                $events += [PSCustomObject]@{
+                    TimeGenerated = $event.TimeCreated
+                    LogSource = "PowerShell"
+                    EventID = $event.Id
+                    EventType = "PowerShell Script Execution"
+                    EventSummary = "PowerShell script executed: $scriptSummary..."
+                    EventDetails = $scriptBlock.Substring(0, [Math]::Min(200, $scriptBlock.Length))
+                    UserName = $event.UserId
+                    MachineName = $event.MachineName
+                    RelatedObjectName = "PowerShell.exe"
+                    Severity = $severity
+                    PatternMatched = $patternMatched
+                }
+            }
+            catch {
+                # Continue to next event if there's an error parsing this one
+                continue
+            }
+        }
+    }
+    catch {
+        Write-ForensicLog "Error retrieving PowerShell log events: $_" -Severity "Warning"
+    }
+    
+    return $events
 }
 
 function Initialize-LogParserConfig {
@@ -750,3 +842,5 @@ function Get-ApplicationLogEvents {
     return $events
 }
 
+# Export function
+Export-ModuleMember -Function Get-WindowsLogParser
